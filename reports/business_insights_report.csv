@@ -1,0 +1,6 @@
+Insight,Finding,Business_Action
+Total Customers,7043,Use this as the customer base for retention planning.
+Customers Who Churned,1869,Investigate churn reasons and retention opportunities.
+Overall Churn Rate (%),26.54,Track this metric over time to evaluate retention efforts.
+Highest Churn Contract Type,Month-to-month (42.71%),Review the customer experience and retention offers for this contract group.
+Average Monthly Charges,Churned: $74.44; Retained: $61.27,"Explore whether pricing, service usage, or customer needs are associated with churn."
