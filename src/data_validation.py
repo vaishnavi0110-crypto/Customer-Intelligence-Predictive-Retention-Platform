@@ -1,69 +1,89 @@
-#Goal: Dataset-la irukkura column names, data types, missing values, duplicate rows, target column ellathaiyum check pannradhu
 
 from pathlib import Path
 import pandas as pd
 
-# 1. Find the project root directory
+# Project root directory
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# 2. Locate the original dataset
+# Input dataset
 DATA_PATH = PROJECT_ROOT / "data" / "raw" / "Telco-Customer-Churn.csv"
+
+# Output directory
+PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+
+# Output validation report
+OUTPUT_PATH = PROCESSED_DIR / "data_validation_report.csv"
 
 
 def validate_dataset():
-    """Load the dataset and perform basic data-quality checks."""
+    """Validate dataset structure and basic data quality."""
 
-    # 3. Check whether the dataset file exists
     if not DATA_PATH.exists():
         raise FileNotFoundError(
-            f"Dataset not found at: {DATA_PATH}"
+            f"Dataset not found at: {DATA_PATH}\n"
+            "Please check the CSV file inside data/raw/."
         )
 
-    # 4. Load the CSV file
     df = pd.read_csv(DATA_PATH)
 
     print("=" * 60)
     print("CUSTOMER INTELLIGENCE PLATFORM - DATA VALIDATION")
     print("=" * 60)
 
-    # 5. Display dataset dimensions
-    print("\n1. Dataset shape:")
+    print("\n1. Dataset shape")
     print(f"Rows: {df.shape[0]}")
     print(f"Columns: {df.shape[1]}")
 
-    # 6. Display column names
-    print("\n2. Column names:")
+    print("\n2. Column names")
     print(df.columns.tolist())
 
-    # 7. Display data types and non-null counts
-    print("\n3. Dataset information:")
+    print("\n3. Data types and non-null counts")
     df.info()
 
-    # 8. Count missing values
-    print("\n4. Missing values by column:")
+    print("\n4. Missing values by column")
     print(df.isnull().sum())
 
-    # 9. Count duplicate rows
-    print("\n5. Duplicate rows:")
-    print(df.duplicated().sum())
+    print("\n5. Duplicate rows")
+    duplicate_count = int(df.duplicated().sum())
+    print(duplicate_count)
 
-    # 10. Check the target column
-    print("\n6. Target column validation:")
+    print("\n6. Target column validation")
     if "Churn" in df.columns:
         print("Churn column exists.")
         print(df["Churn"].value_counts(dropna=False))
     else:
         print("ERROR: Churn column is missing.")
 
-    # 11. Check unique customer IDs
-    print("\n7. Customer ID validation:")
+    print("\n7. Customer ID validation")
     if "customerID" in df.columns:
         print("Unique customer IDs:", df["customerID"].nunique())
         print("Missing customer IDs:", df["customerID"].isnull().sum())
+        print("Duplicate customer IDs:", int(df["customerID"].duplicated().sum()))
     else:
         print("ERROR: customerID column is missing.")
 
-    print("\nData validation completed.")
+    # Build a column-level validation report
+    report_rows = []
+
+    for column in df.columns:
+        report_rows.append({
+            "Column": column,
+            "DataType": str(df[column].dtype),
+            "MissingValues": int(df[column].isnull().sum()),
+            "MissingPercent": round(
+                float(df[column].isnull().mean() * 100), 2
+            ),
+            "UniqueValues": int(df[column].nunique(dropna=True)),
+            "HasMissingValues": bool(df[column].isnull().any())
+        })
+
+    report = pd.DataFrame(report_rows)
+    report.to_csv(OUTPUT_PATH, index=False)
+
+    print("\n8. Validation report saved to:")
+    print(OUTPUT_PATH)
+    print("\nData validation completed successfully.")
 
 
 if __name__ == "__main__":

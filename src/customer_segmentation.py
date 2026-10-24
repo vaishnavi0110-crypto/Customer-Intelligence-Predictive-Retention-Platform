@@ -5,7 +5,6 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 DATA_PATH = (
@@ -15,36 +14,32 @@ DATA_PATH = (
     / "telco_churn_cleaned.csv"
 )
 
-REPORT_DIR = PROJECT_ROOT / "reports"
+PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 
 
 def run_segmentation():
-    # 1. Load cleaned customer data
+    # Load cleaned customer data
     df = pd.read_csv(DATA_PATH)
 
-    # 2. Select useful customer behavior features
-    features = [
-        "tenure",
-        "MonthlyCharges",
-        "TotalCharges",
-    ]
+    print("Original dataset shape:", df.shape)
 
+    # Select customer behavior features
+    features = ["tenure", "MonthlyCharges", "TotalCharges"]
     X = df[features].copy()
 
-    # 3. Scale features so their magnitudes are comparable
+    # Scale features
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # 4. Group customers into 3 clusters
+    # Create 3 customer segments
     kmeans = KMeans(
         n_clusters=3,
         random_state=42,
         n_init=10,
     )
-
     df["CustomerSegment"] = kmeans.fit_predict(X_scaled)
 
-    # 5. Create a summary for each segment
+    # Create segment summary
     summary = (
         df.groupby("CustomerSegment")
         .agg(
@@ -61,15 +56,16 @@ def run_segmentation():
         summary["ChurnCount"] / summary["CustomerCount"] * 100
     ).round(2)
 
-    # 6. Save results
-    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    # Save BOTH CSV files only in data/processed
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
-    segment_path = REPORT_DIR / "customer_segments.csv"
-    summary_path = REPORT_DIR / "customer_segment_summary.csv"
+    segment_path = PROCESSED_DIR / "customer_segments.csv"
+    summary_path = PROCESSED_DIR / "customer_segment_summary.csv"
 
     df.to_csv(segment_path, index=False)
     summary.to_csv(summary_path, index=False)
 
+    # Display results
     print("\nCUSTOMER SEGMENTATION COMPLETED")
     print("Total customers:", len(df))
     print("Number of segments:", df["CustomerSegment"].nunique())

@@ -51,8 +51,8 @@ def run_eda():
     print(pd.crosstab(df["Contract"], df["Churn"]))
 
     # 10. Save a summary report
-    report_dir = PROJECT_ROOT / "reports"
-    report_dir.mkdir(parents=True, exist_ok=True)
+    processed_dir = PROJECT_ROOT / "data" / "processed"
+    processed_dir.mkdir(parents=True, exist_ok=True)
 
     summary = pd.DataFrame({
         "Metric": [
@@ -71,7 +71,7 @@ def run_eda():
         ]
     })
 
-    summary_path = report_dir / "eda_summary.csv"
+    summary_path = processed_dir / "eda_summary.csv"
     summary.to_csv(summary_path, index=False)
 
     print("\n8. Summary saved to:", summary_path)

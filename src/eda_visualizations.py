@@ -15,7 +15,7 @@ DATA_PATH = (
 )
 
 # 3. Set the folder for saving graphs
-REPORT_DIR = PROJECT_ROOT / "reports"
+REPORT_DIR = PROJECT_ROOT / "data" / "processed"
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 

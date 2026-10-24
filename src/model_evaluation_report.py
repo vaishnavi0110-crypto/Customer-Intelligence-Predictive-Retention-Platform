@@ -3,16 +3,26 @@ from pathlib import Path
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-INPUT_PATH = PROJECT_ROOT / "reports" / "model_comparison.csv"
-OUTPUT_PATH = PROJECT_ROOT / "reports" / "model_evaluation_report.csv"
+
+INPUT_PATH = (
+    PROJECT_ROOT / "reports" / "notebook_model_evaluation.csv"
+)
+
+OUTPUT_PATH = (
+    PROJECT_ROOT / "data" / "processed" / "model_evaluation_report.csv"
+)
 
 
 def main():
     if not INPUT_PATH.exists():
-        print("ERROR: reports/model_comparison.csv not found.")
+        print(f"ERROR: Input file not found: {INPUT_PATH}")
         return
 
     df = pd.read_csv(INPUT_PATH)
+
+    # Match the column names used in the notebook CSV
+    if "F1_Score" in df.columns and "F1" not in df.columns:
+        df = df.rename(columns={"F1_Score": "F1"})
 
     required_columns = [
         "Model", "Accuracy", "Precision",

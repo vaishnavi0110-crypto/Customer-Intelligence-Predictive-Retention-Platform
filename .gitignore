@@ -23,3 +23,13 @@ Thumbs.db
 
 # Jupyter checkpoints
 .ipynb_checkpoints/
+# Generated customer data and reports
+data/processed/*
+!data/processed/.gitkeep
+
+# Trained model files
+models/*.joblib
+models/*.pkl
+
+# Accidental temporary file
+/tatus --short

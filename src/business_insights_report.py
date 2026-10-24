@@ -6,7 +6,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = (
     PROJECT_ROOT / "data" / "processed" / "telco_churn_cleaned.csv"
 )
-OUTPUT_PATH = PROJECT_ROOT / "reports" / "business_insights_report.csv"
+OUTPUT_PATH = (PROJECT_ROOT / "data" / "processed" / "business_insights_report.csv")
 
 
 def main():
