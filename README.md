@@ -23,26 +23,47 @@ Customer_Intelligence_Predictive_Retention_Platform/
 │   ├── __init__.py
 │   └── main.py
 ├── src/
+│   ├── business_insights_report.py
+│   ├── customer_segmentation.py
 │   ├── dashboard.py
+│   ├── data_cleaning.py
 │   ├── data_validation.py
-│   ├── preprocessing.py
+│   ├── eda_analysis.py
+│   ├── eda_visualizations.py
 │   ├── feature_engineering.py
+│   ├── model_evaluation_report.py
+│   ├── predict_customer.py
+│   ├── preprocessing.py
 │   ├── train.py
-│   ├── evaluate.py
-│   ├── predict.py
-│   └── segmentation.py
+│   └── verify_cleaned_data.py
 ├── tests/
 │   ├── __init__.py
 │   └── test_api.py
+├── notebooks/
+│   ├── 01_Exploratory_Data_Analysis.ipynb
+│   ├── 02_Model_Evaluation.ipynb
+│   └── 03_Customer_Segmentation.ipynb
 ├── data/
 │   ├── raw/
+│   │   └── Telco-Customer-Churn.csv
 │   └── processed/
 ├── models/
+│   └── churn_model.joblib
 ├── reports/
+│   ├── confusion_matrix.png
+│   ├── notebook_churn_distribution.png
+│   ├── notebook_churn_summary.csv
+│   ├── notebook_contract_churn.csv
+│   ├── notebook_contract_churn.png
+│   ├── notebook_customer_summary.csv
+│   ├── notebook_model_evaluation.csv
+│   ├── notebook_monthly_charges_churn.png
+│   ├── notebook_tenure_churn.png
+│   └── roc_curve.png
 ├── requirements.txt
+├── .gitignore
 └── README.md
 ```
-
 *Note: The structure above highlights the main project components. Refer to the repository for the complete list of files.*
 
 ## Setup and Execution
@@ -117,8 +138,10 @@ The dashboard currently reports:
 - **Churn rate:** 26.54%
 - **Retention rate:** 73.46%
 - **Best F1 model:** Logistic Regression — 60.40%
-- **Best Recall model:** Random Forest — 63.37%
+- **Best Recall model:** Logistic Regression — 55.88%
 - **Best ROC-AUC model:** Gradient Boosting — 84.33%
+
+These are the results recorded in `reports/notebook_model_evaluation.csv`. Model performance may vary when retraining or changing the evaluation setup.
 
 These are the results currently displayed by the project dashboard; model performance may vary when retraining or changing the evaluation setup.
 
@@ -129,10 +152,33 @@ These are the results currently displayed by the project dashboard; model perfor
 - Reproduce the dashboard and API outputs only after obtaining the required local dataset and model files.
 - Predictions are estimates for decision support, not guarantees of future customer behavior.
 
-## Project Status
+### Dataset Documentation
 
-The Streamlit dashboard and FastAPI prediction endpoint have been launched and tested locally as part of the internship prototype.
+- **Dataset Name:** IBM Telco Customer Churn Dataset
+- **Dataset Source:** https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv
+- **Expected Records:** 7,043
+- **Expected Columns:** 21
+- **Customer Identifier:** `customerID`
+- **Target Column:** `Churn`
 
-## Author
+Verify the record and column counts against the actual CSV file before reporting them as confirmed.
 
-Developed as an AI Data Analytics Internship project.
+### Dataset Limitations
+
+- The dataset contains historical information and may not reflect current customer behavior.
+- It is not a live feed from a company's CRM or billing system.
+- Support tickets, complaints, customer satisfaction scores, or usage information must not be presented as real observations unless those fields exist in the source data.
+- Model predictions are estimates and should support, not replace, business decisions.
+
+### Data Quality and Preprocessing
+
+- Check for missing values and duplicate records.
+- Validate column names and data types.
+- Convert `TotalCharges` to numeric and inspect blank or invalid values.
+- Document the cleaning, preprocessing, and feature engineering steps performed before model training.
+
+### Reproducibility and Responsible Use
+
+- Record the dataset source and any modifications made to the original data.
+- Keep credentials and unauthorized private customer information out of the repository.
+- Ensure that the required dataset and trained model files are available before running the dashboard or API.

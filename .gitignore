@@ -1,28 +1,21 @@
 
-# Python cache files
-__pycache__/
-*.py[cod]
-
-# Virtual environment
+# Python virtual environment
 .venv/
 venv/
 env/
 
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
 # Environment variables and secrets
 .env
 .env.*
+!.env.example
 
-# Editor and operating system files
-.vscode/
-.DS_Store
-Thumbs.db
-
-# Temporary files
-*.log
-*.tmp
-
-# Jupyter checkpoints
-.ipynb_checkpoints/
 # Generated customer data and reports
 data/processed/*
 !data/processed/.gitkeep
@@ -31,5 +24,8 @@ data/processed/*
 models/*.joblib
 models/*.pkl
 
-# Accidental temporary file
-/tatus --short
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

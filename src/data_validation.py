@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import pandas as pd
 
@@ -26,6 +25,13 @@ def validate_dataset():
         )
 
     df = pd.read_csv(DATA_PATH)
+
+    # Convert TotalCharges to numeric.
+    # Blank or invalid values will be identified as missing values.
+    if "TotalCharges" in df.columns:
+        df["TotalCharges"] = pd.to_numeric(
+            df["TotalCharges"], errors="coerce"
+        )
 
     print("=" * 60)
     print("CUSTOMER INTELLIGENCE PLATFORM - DATA VALIDATION")
@@ -59,7 +65,10 @@ def validate_dataset():
     if "customerID" in df.columns:
         print("Unique customer IDs:", df["customerID"].nunique())
         print("Missing customer IDs:", df["customerID"].isnull().sum())
-        print("Duplicate customer IDs:", int(df["customerID"].duplicated().sum()))
+        print(
+            "Duplicate customer IDs:",
+            int(df["customerID"].duplicated().sum())
+        )
     else:
         print("ERROR: customerID column is missing.")
 
