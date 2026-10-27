@@ -12,14 +12,11 @@ import streamlit as st
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 MODEL_PATH = PROJECT_ROOT / "models" / "churn_model.joblib"
-DATA_PATH = (
-    PROJECT_ROOT / "data" / "processed" / "telco_churn_cleaned.csv"
-)
-SEGMENT_PATH = (
-    PROJECT_ROOT / "data" / "processed" / "customer_segment_summary.csv"
-)
+DATA_PATH = PROJECT_ROOT / "data" / "processed" / "telco_churn_cleaned.csv"
+SEGMENT_PATH = PROJECT_ROOT / "data" / "processed" / "customer_segment_summary.csv"
 PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 PREDICTION_PATH = PROCESSED_DIR / "customer_prediction.csv"
+MODEL_REPORT_PATH = PROJECT_ROOT / "reports" / "notebook_model_evaluation.csv"
 
 
 # --------------------------------------------------
@@ -41,11 +38,16 @@ PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # --------------------------------------------------
-# 3. LOAD TRAINED MODEL
+# 3. LOAD TRAINED MODEL AND DATA
 # --------------------------------------------------
 @st.cache_resource
 def load_model(model_path):
     return joblib.load(model_path)
+
+
+@st.cache_data
+def load_customer_data(data_path):
+    return pd.read_csv(data_path)
 
 
 if not MODEL_PATH.exists():
@@ -53,19 +55,167 @@ if not MODEL_PATH.exists():
     st.stop()
 
 try:
-    model = load_model(MODEL_PATH)
+    model = load_model(str(MODEL_PATH))
 except Exception as error:
     st.error(f"Could not load the trained model: {error}")
     st.stop()
 
+if DATA_PATH.exists():
+    try:
+        df = load_customer_data(str(DATA_PATH))
+    except Exception as error:
+        st.error(f"Could not load the cleaned dataset: {error}")
+        st.stop()
+else:
+    df = pd.DataFrame()
+    st.warning(
+        "Cleaned dataset not found. Customer ID selection and "
+        "business analytics require data/processed/telco_churn_cleaned.csv."
+    )
+
+
 # --------------------------------------------------
-# 3A. MODEL COMPARISON
+# 3A. CUSTOMER ID SELECTION AND AUTO-FILL
+# --------------------------------------------------
+st.header("Customer ID Selection")
+
+if not df.empty and "customerID" in df.columns:
+    customer_ids = df["customerID"].dropna().astype(str).tolist()
+
+    def load_selected_customer():
+        selected_id = st.session_state.get(
+            "customer_id_selector", "Manual Entry"
+        )
+
+        if selected_id == "Manual Entry":
+            defaults = {
+                "gender_input": "Female",
+                "senior_input": 0,
+                "partner_input": "No",
+                "dependents_input": "No",
+                "tenure_input": 12,
+                "phone_input": "Yes",
+                "multiple_lines_input": "No",
+                "internet_input": "DSL",
+                "security_input": "No",
+                "backup_input": "No",
+                "device_input": "No",
+                "support_input": "No",
+                "tv_input": "No",
+                "movies_input": "No",
+                "contract_input": "Month-to-month",
+                "billing_input": "Yes",
+                "payment_input": "Electronic check",
+                "monthly_input": 70.0,
+                "total_input": 840.0,
+            }
+
+            for key, value in defaults.items():
+                st.session_state[key] = value
+
+            return
+
+        matched = df[df["customerID"].astype(str) == selected_id]
+
+        if matched.empty:
+            return
+
+        customer = matched.iloc[0]
+
+        # Convert the selected customer's dataset values into form values.
+        field_mapping = {
+            "gender_input": ("gender", "Female"),
+            "senior_input": ("SeniorCitizen", 0),
+            "partner_input": ("Partner", "No"),
+            "dependents_input": ("Dependents", "No"),
+            "tenure_input": ("tenure", 12),
+            "phone_input": ("PhoneService", "Yes"),
+            "multiple_lines_input": ("MultipleLines", "No"),
+            "internet_input": ("InternetService", "DSL"),
+            "security_input": ("OnlineSecurity", "No"),
+            "backup_input": ("OnlineBackup", "No"),
+            "device_input": ("DeviceProtection", "No"),
+            "support_input": ("TechSupport", "No"),
+            "tv_input": ("StreamingTV", "No"),
+            "movies_input": ("StreamingMovies", "No"),
+            "contract_input": ("Contract", "Month-to-month"),
+            "billing_input": ("PaperlessBilling", "Yes"),
+            "payment_input": ("PaymentMethod", "Electronic check"),
+            "monthly_input": ("MonthlyCharges", 70.0),
+            "total_input": ("TotalCharges", 840.0),
+        }
+
+        for key, (column, fallback) in field_mapping.items():
+            value = customer.get(column, fallback)
+
+            if pd.isna(value):
+                value = fallback
+
+            if key == "senior_input":
+                value = int(value)
+            elif key == "tenure_input":
+                value = int(value)
+            elif key in ("monthly_input", "total_input"):
+                value = float(value)
+
+            st.session_state[key] = value
+
+    selected_customer_id = st.selectbox(
+        "Select Customer ID",
+        options=["Manual Entry"] + customer_ids,
+        key="customer_id_selector",
+        on_change=load_selected_customer,
+        help="Select an existing customer to automatically fill their details.",
+    )
+
+    if selected_customer_id != "Manual Entry":
+        st.success(
+            f"Customer selected: {selected_customer_id}. "
+            "Their saved details will be loaded into the form."
+        )
+
+else:
+    selected_customer_id = "Manual Entry"
+    st.info(
+        "Customer ID selection is unavailable because the dataset "
+        "or customerID column was not found."
+    )
+
+
+# --------------------------------------------------
+# 3B. INITIAL FORM VALUES
+# --------------------------------------------------
+default_values = {
+    "gender_input": "Female",
+    "senior_input": 0,
+    "partner_input": "No",
+    "dependents_input": "No",
+    "tenure_input": 12,
+    "phone_input": "Yes",
+    "multiple_lines_input": "No",
+    "internet_input": "DSL",
+    "security_input": "No",
+    "backup_input": "No",
+    "device_input": "No",
+    "support_input": "No",
+    "tv_input": "No",
+    "movies_input": "No",
+    "contract_input": "Month-to-month",
+    "billing_input": "Yes",
+    "payment_input": "Electronic check",
+    "monthly_input": 70.0,
+    "total_input": 840.0,
+}
+
+for key, value in default_values.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+
+# --------------------------------------------------
+# 4. MODEL COMPARISON
 # --------------------------------------------------
 st.header("Machine Learning Model Comparison")
-
-MODEL_REPORT_PATH = (
-    PROJECT_ROOT / "reports" / "notebook_model_evaluation.csv"
-)
 
 if MODEL_REPORT_PATH.exists():
     model_results = pd.read_csv(MODEL_REPORT_PATH)
@@ -77,55 +227,54 @@ if MODEL_REPORT_PATH.exists():
             hide_index=True,
         )
 
-        best_f1_row = model_results.loc[
-            model_results["F1_Score"].idxmax()
-        ]
+        if {"Model", "F1_Score", "Recall", "ROC_AUC"}.issubset(
+            model_results.columns
+        ):
+            best_f1_row = model_results.loc[
+                model_results["F1_Score"].idxmax()
+            ]
+            best_recall_row = model_results.loc[
+                model_results["Recall"].idxmax()
+            ]
+            best_auc_row = model_results.loc[
+                model_results["ROC_AUC"].idxmax()
+            ]
 
-        col1, col2, col3 = st.columns(3)
+            col1, col2, col3 = st.columns(3)
 
-        col1.metric(
-            "Best F1 Model",
-            best_f1_row["Model"],
-            f"{best_f1_row['F1_Score']:.2%}",
-        )
+            col1.metric(
+                "Best F1 Model",
+                best_f1_row["Model"],
+                f"{best_f1_row['F1_Score']:.2%}",
+            )
+            col2.metric(
+                "Best Recall Model",
+                best_recall_row["Model"],
+                f"{best_recall_row['Recall']:.2%}",
+            )
+            col3.metric(
+                "Best ROC-AUC Model",
+                best_auc_row["Model"],
+                f"{best_auc_row['ROC_AUC']:.2%}",
+            )
 
-        best_recall_row = model_results.loc[
-            model_results["Recall"].idxmax()
-        ]
-        col2.metric(
-            "Best Recall Model",
-            best_recall_row["Model"],
-            f"{best_recall_row['Recall']:.2%}",
-        )
-
-        best_auc_row = model_results.loc[
-            model_results["ROC_AUC"].idxmax()
-        ]
-        col3.metric(
-            "Best ROC-AUC Model",
-            best_auc_row["Model"],
-            f"{best_auc_row['ROC_AUC']:.2%}",
-        )
-
-        st.subheader("F1-score Comparison")
-        st.bar_chart(
-            model_results.set_index("Model")[["F1_Score"]]
-        )
-
+            st.subheader("F1-score Comparison")
+            st.bar_chart(
+                model_results.set_index("Model")[["F1_Score"]]
+            )
 else:
     st.warning(
         "Model comparison report not found. "
         "Run python .\\src\\train.py first."
     )
 
+
 # --------------------------------------------------
-# 4. BUSINESS ANALYTICS
+# 5. BUSINESS ANALYTICS
 # --------------------------------------------------
 st.header("Business Analytics")
 
-if DATA_PATH.exists():
-    df = pd.read_csv(DATA_PATH)
-
+if not df.empty:
     required_columns = {"Churn", "Contract"}
     missing_columns = required_columns - set(df.columns)
 
@@ -165,15 +314,12 @@ if DATA_PATH.exists():
             df["Contract"], df["Churn"]
         ).reindex(columns=["No", "Yes"], fill_value=0)
         st.bar_chart(contract_table)
-
 else:
-    st.warning(
-        "Cleaned dataset not found. Run src/data_cleaning.py first."
-    )
+    st.warning("Business analytics cannot load without the cleaned dataset.")
 
 
 # --------------------------------------------------
-# 5. CUSTOMER SEGMENTATION
+# 6. CUSTOMER SEGMENTATION
 # --------------------------------------------------
 st.header("Customer Segmentation")
 
@@ -193,20 +339,20 @@ if SEGMENT_PATH.exists():
         segment_summary.columns
     ):
         st.subheader("Churn Rate by Customer Segment")
-        segment_chart = segment_summary.set_index(
-            "CustomerSegment"
-        )[["ChurnRatePercent"]]
-        st.bar_chart(segment_chart)
-
+        st.bar_chart(
+            segment_summary.set_index("CustomerSegment")[
+                ["ChurnRatePercent"]
+            ]
+        )
     elif {"Segment", "ChurnRatePercent"}.issubset(
         segment_summary.columns
     ):
         st.subheader("Churn Rate by Customer Segment")
-        segment_chart = segment_summary.set_index(
-            "Segment"
-        )[["ChurnRatePercent"]]
-        st.bar_chart(segment_chart)
-
+        st.bar_chart(
+            segment_summary.set_index("Segment")[
+                ["ChurnRatePercent"]
+            ]
+        )
 else:
     st.warning(
         "Customer segment summary not found at:\n"
@@ -216,57 +362,102 @@ else:
 
 
 # --------------------------------------------------
-# 6. CUSTOMER CHURN PREDICTION FORM
+# 7. CUSTOMER CHURN PREDICTION FORM
 # --------------------------------------------------
 st.header("Predict Customer Churn")
-st.write("Enter customer details, then click Predict Churn.")
+
+if selected_customer_id == "Manual Entry":
+    manual_customer_id = st.text_input(
+        "Customer ID (optional for manual entry)",
+        placeholder="Example: 7590-VHVEG",
+        help="Enter an ID if you want it saved with your manual prediction.",
+    )
+else:
+    manual_customer_id = selected_customer_id
+
+st.write(
+    "Choose an existing Customer ID to load their details, "
+    "or select Manual Entry to enter details yourself."
+)
 
 with st.form("customer_prediction_form"):
     col1, col2 = st.columns(2)
 
     with col1:
-        gender = st.selectbox("Gender", ["Female", "Male"])
+        gender = st.selectbox(
+            "Gender", ["Female", "Male"], key="gender_input"
+        )
         senior_citizen = st.selectbox(
-            "Senior Citizen", [0, 1],
+            "Senior Citizen",
+            [0, 1],
             format_func=lambda value: "Yes" if value == 1 else "No",
+            key="senior_input",
         )
-        partner = st.selectbox("Has Partner?", ["Yes", "No"])
-        dependents = st.selectbox("Has Dependents?", ["Yes", "No"])
+        partner = st.selectbox(
+            "Has Partner?", ["Yes", "No"], key="partner_input"
+        )
+        dependents = st.selectbox(
+            "Has Dependents?", ["Yes", "No"], key="dependents_input"
+        )
         tenure = st.number_input(
-            "Tenure (months)", min_value=0, max_value=72, value=12
+            "Tenure (months)",
+            min_value=0,
+            max_value=72,
+            step=1,
+            key="tenure_input",
         )
-        phone_service = st.selectbox("Phone Service", ["Yes", "No"])
+        phone_service = st.selectbox(
+            "Phone Service", ["Yes", "No"], key="phone_input"
+        )
         multiple_lines = st.selectbox(
-            "Multiple Lines", ["No", "Yes", "No phone service"]
+            "Multiple Lines",
+            ["No", "Yes", "No phone service"],
+            key="multiple_lines_input",
         )
         internet_service = st.selectbox(
-            "Internet Service", ["DSL", "Fiber optic", "No"]
+            "Internet Service",
+            ["DSL", "Fiber optic", "No"],
+            key="internet_input",
         )
         online_security = st.selectbox(
-            "Online Security", ["Yes", "No", "No internet service"]
+            "Online Security",
+            ["Yes", "No", "No internet service"],
+            key="security_input",
         )
         online_backup = st.selectbox(
-            "Online Backup", ["Yes", "No", "No internet service"]
+            "Online Backup",
+            ["Yes", "No", "No internet service"],
+            key="backup_input",
         )
 
     with col2:
         device_protection = st.selectbox(
-            "Device Protection", ["Yes", "No", "No internet service"]
+            "Device Protection",
+            ["Yes", "No", "No internet service"],
+            key="device_input",
         )
         tech_support = st.selectbox(
-            "Tech Support", ["Yes", "No", "No internet service"]
+            "Tech Support",
+            ["Yes", "No", "No internet service"],
+            key="support_input",
         )
         streaming_tv = st.selectbox(
-            "Streaming TV", ["Yes", "No", "No internet service"]
+            "Streaming TV",
+            ["Yes", "No", "No internet service"],
+            key="tv_input",
         )
         streaming_movies = st.selectbox(
-            "Streaming Movies", ["Yes", "No", "No internet service"]
+            "Streaming Movies",
+            ["Yes", "No", "No internet service"],
+            key="movies_input",
         )
         contract = st.selectbox(
-            "Contract", ["Month-to-month", "One year", "Two year"]
+            "Contract",
+            ["Month-to-month", "One year", "Two year"],
+            key="contract_input",
         )
         paperless_billing = st.selectbox(
-            "Paperless Billing", ["Yes", "No"]
+            "Paperless Billing", ["Yes", "No"], key="billing_input"
         )
         payment_method = st.selectbox(
             "Payment Method",
@@ -276,16 +467,21 @@ with st.form("customer_prediction_form"):
                 "Bank transfer (automatic)",
                 "Credit card (automatic)",
             ],
+            key="payment_input",
         )
         monthly_charges = st.number_input(
             "Monthly Charges ($)",
-            min_value=0.0, max_value=200.0, value=70.0, step=1.0,
+            min_value=0.0,
+            max_value=200.0,
+            step=1.0,
+            key="monthly_input",
         )
-        default_total = float(tenure) * float(monthly_charges)
         total_charges = st.number_input(
             "Total Charges ($)",
-            min_value=0.0, max_value=10000.0,
-            value=min(default_total, 10000.0), step=10.0,
+            min_value=0.0,
+            max_value=10000.0,
+            step=10.0,
+            key="total_input",
         )
 
     submitted = st.form_submit_button(
@@ -294,7 +490,7 @@ with st.form("customer_prediction_form"):
 
 
 # --------------------------------------------------
-# 7. DISPLAY AND SAVE PREDICTION
+# 8. DISPLAY AND SAVE PREDICTION
 # --------------------------------------------------
 if submitted:
     customer_data = {
@@ -340,6 +536,12 @@ if submitted:
         predicted_label = "Yes" if predicted_yes else "No"
 
         st.subheader("Prediction Result")
+
+        if manual_customer_id.strip():
+            st.write(f"**Customer ID:** {manual_customer_id.strip()}")
+        else:
+            st.write("**Customer ID:** Not provided")
+
         result_col1, result_col2 = st.columns(2)
 
         with result_col1:
@@ -349,9 +551,14 @@ if submitted:
                 st.success("Prediction: Customer likely to stay")
 
         with result_col2:
-            st.metric("Churn Probability", f"{churn_probability:.2f}%")
+            st.metric(
+                "Churn Probability",
+                f"{churn_probability:.2f}%",
+            )
 
-        st.progress(min(max(churn_probability / 100, 0.0), 1.0))
+        st.progress(
+            min(max(churn_probability / 100, 0.0), 1.0)
+        )
 
         if churn_probability >= 50:
             st.warning(
@@ -365,20 +572,41 @@ if submitted:
             )
 
         prediction_report = customer_df.copy()
+        prediction_report.insert(
+            0,
+            "customerID",
+            manual_customer_id.strip() or "Not provided",
+        )
         prediction_report["PredictedChurn"] = predicted_label
         prediction_report["ChurnProbability"] = round(
             churn_probability, 2
         )
+
+        # Append predictions so earlier prediction records are retained.
+        if PREDICTION_PATH.exists():
+            old_report = pd.read_csv(PREDICTION_PATH)
+            prediction_report = pd.concat(
+                [old_report, prediction_report],
+                ignore_index=True,
+            )
+
         prediction_report.to_csv(PREDICTION_PATH, index=False)
 
         st.success(f"Prediction saved to: {PREDICTION_PATH}")
+
+        st.subheader("Saved Prediction Details")
+        st.dataframe(
+            prediction_report.tail(5),
+            width="stretch",
+            hide_index=True,
+        )
 
     except Exception as error:
         st.error(f"Prediction failed: {error}")
 
 
 # --------------------------------------------------
-# 8. FOOTER
+# 9. FOOTER
 # --------------------------------------------------
 st.divider()
 st.caption(
