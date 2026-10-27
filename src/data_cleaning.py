@@ -18,7 +18,7 @@ def clean_dataset():
     print("Original dataset shape:", df.shape)
 
     # 4. Remove unwanted spaces from text columns
-    text_columns = df.select_dtypes(include=["object", "str"]).columns
+    text_columns = df.select_dtypes(include=["object"]).columns
     for column in text_columns:
         df[column] = df[column].str.strip()
 
